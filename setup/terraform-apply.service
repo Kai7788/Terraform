@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/terraform-apply.sh
-WorkingDirectory=/path/to/your/terraform/project
+WorkingDirectory=/home/kai/Terraform/
 RemainAfterExit=true
 
 [Install]
