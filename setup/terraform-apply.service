@@ -1,0 +1,13 @@
+[Unit]
+Description=Run Terraform Apply
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/terraform-apply.sh
+WorkingDirectory=/path/to/your/terraform/project
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
