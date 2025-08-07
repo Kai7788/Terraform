@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <i class="fas fa-download"></i>
+        </div>
+        <h1>YouTube Downloader</h1>
+        <p class="subtitle">Konvertiere YouTube-Videos in MP3 oder MP4</p>
+        
+        <form id="converter-form" class="converter-form">
+            <div class="input-group">
+                <input type="url" id="youtube-url" 
+                       placeholder="https://www.youtube.com/watch?v=..." required>
+            </div>
+            
+            <div class="format-selector">
+                <div class="format-option">
+                    <input type="radio" id="format-mp3" name="format" value="mp3" checked>
+                    <label for="format-mp3"><i class="fas fa-music"></i> MP3 (Audio)</label>
+                </div>
+                <div class="format-option">
+                    <input type="radio" id="format-mp4" name="format" value="mp4">
+                    <label for="format-mp4"><i class="fas fa-video"></i> MP4 (Video)</label>
+                </div>
+            </div>
+            
+            <button type="submit" id="convert-btn">
+                <i class="fas fa-download"></i> Herunterladen
+            </button>
+        </form>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        
+        <div id="status">Gib eine YouTube-URL ein und wähle ein Format</div>
+        
+        <p class="footer">
+            <i class="fas fa-info-circle"></i> Dateien werden bei Bedarf erstellt und nach dem Download gelöscht
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('converter-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('youtube-url').value;
+            const format = document.querySelector('input[name="format"]:checked').value;
+            const status = document.getElementById('status');
+            const progressContainer = document.querySelector('.progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const convertBtn = document.getElementById('convert-btn');
+            
+            // Validate URL
+            if (!url.match(/youtube\.com|youtu\.be/)) {
+                status.textContent = 'Bitte gib eine gültige YouTube-URL ein';
+                status.className = 'error';
+                return;
+            }
+            
+            // Update UI
+            status.textContent = format === 'mp3' 
+                ? 'Audio wird verarbeitet...' 
+                : 'Video wird verarbeitet...';
+            status.className = 'processing';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            convertBtn.disabled = true;
+            
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 5;
+                progressBar.style.width = `${Math.min(progress, 90)}%`;
+            }, 500);
+            
+            try {
+                const formData = new FormData();
+                formData.append('url', url);
+                formData.append('format', format);
+                
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unknown error occurred');
+                    }
+                } else {
+                    // Handle non-JSON response (file download)
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(errorText || 'Download failed');
+                    }
+                    
+                    // Get filename from headers
+                    const contentDisposition = response.headers.get('content-disposition');
+                    let filename = format === 'mp3' ? 'youtube_audio.mp3' : 'youtube_video.mp4';
+                    
+                    if (contentDisposition) {
+                        const match = contentDisposition.match(/filename="(.+)"/);
+                        if (match && match[1]) {
+                            filename = match[1];
+                        }
+                    }
+                    
+                    // Create download link
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(downloadUrl);
+                        a.remove();
+                    }, 100);
+                    
+                    status.textContent = `Download abgeschlossen: ${filename}`;
+                    status.className = 'success';
+                    
+                    // Reset after success
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        convertBtn.disabled = false;
+                        status.textContent = 'Gib eine YouTube-URL ein und wähle ein Format';
+                        status.className = '';
+                    }, 5000);
+                    return;
+                }
+                
+            } catch (error) {
+                clearInterval(progressInterval);
+                status.textContent = `Fehler: ${error.message}`;
+                status.className = 'error';
+                progressContainer.style.display = 'none';
+                convertBtn.disabled = false;
+                console.error('Download error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
