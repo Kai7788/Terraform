@@ -216,3 +216,36 @@ resource "docker_container" "pihole" {
     name = docker_network.proxy_net.name
   }
 }
+
+
+# === Tor Relay ===
+resource "docker_network" "tor_net" {
+  name   = "tor_net"
+  driver = "bridge"
+}
+
+resource "docker_container" "tor_relay" {
+  name    = "tor_relay"
+  image   = "osminogin/tor-simple:latest"
+  restart = "unless-stopped"
+
+  ports {
+    internal = 9001
+    external = 9001
+    protocol = "tcp"
+  }
+
+  volumes {
+    host_path      = abspath("${path.module}/tor/torrc")
+    container_path = "/etc/tor/torrc"
+  }
+
+  volumes {
+    host_path      = abspath("${path.module}/tor/data")
+    container_path = "/var/lib/tor"
+  }
+
+  networks_advanced {
+    name = docker_network.tor_net.name
+  }
+}

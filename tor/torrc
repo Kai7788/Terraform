@@ -1,0 +1,20 @@
+# Tor Relay Configuration for Raspberry Pi 5
+
+Nickname EinKrassesDeutschesRelay
+ContactInfo none@none.com
+
+# Relay ORPort (must match Terraform ports block)
+ORPort 9001
+
+# Disable SOCKS (not a client)
+SocksPort 0
+
+# Non-exit relay (safe at home!)
+ExitPolicy reject *:*
+
+# Bandwidth limits (5 MB/s sustained, 10 MB/s burst)
+RelayBandwidthRate 5 MB
+RelayBandwidthBurst 10 MB
+
+# Logs
+Log notice null
