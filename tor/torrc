@@ -1,6 +1,6 @@
 # Tor Relay Configuration for Raspberry Pi 5
 
-Nickname EinKrassesDeutschesRelay
+Nickname RandomRelay778
 ContactInfo none@none.com
 
 # Relay ORPort (must match Terraform ports block)
