@@ -15,6 +15,3 @@ ExitPolicy reject *:*
 # Bandwidth limits (5 MB/s sustained, 10 MB/s burst)
 RelayBandwidthRate 5 MB
 RelayBandwidthBurst 10 MB
-
-# Logs
-Log notice null
