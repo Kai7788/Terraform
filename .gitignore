@@ -1,1 +1,3 @@
 **/.terraform/*
+/pihole/etc-pihole/*
+
