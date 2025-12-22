@@ -74,7 +74,7 @@ resource "docker_container" "nextcloud" {
   ]
 
   dns        = ["192.168.178.150"]
-  dns_search = ["fritz.box"]
+  dns_search = ["lan", "fritz.box"]
 
   volumes {
     host_path      = "/mnt/nextcloud_data"
