@@ -34,12 +34,12 @@ variable "woodpecker_agent_secret" {
   sensitive = true
 }
 
-variable "woodpecker_codeberg_client" {
+variable "woodpecker_forgejo_client" {
   type      = string
   sensitive = true
 }
 
-variable "woodpecker_codeberg_secret" {
+variable "woodpecker_forgejo_secret" {
   type      = string
   sensitive = true
 }
@@ -47,6 +47,11 @@ variable "woodpecker_codeberg_secret" {
 variable "woodpecker_host" {
   type    = string
   default = "ci.lan"
+}
+
+variable "forgejo_host" {
+  type    = string
+  default = "git.lan"
 }
 
 variable "timezone" {
@@ -102,6 +107,10 @@ resource "docker_image" "woodpecker_server" {
 
 resource "docker_image" "woodpecker_agent" {
   name = "woodpeckerci/woodpecker-agent:v3"
+}
+
+resource "docker_image" "forgejo" {
+  name = "codeberg.org/forgejo/forgejo:14"
 }
 
 resource "docker_image" "yt_converter_image" {
@@ -228,6 +237,43 @@ resource "docker_container" "yt_converter" {
 }
 
 ############################
+# Forgejo (local git server)
+############################
+
+resource "docker_container" "forgejo" {
+  name    = "forgejo"
+  image   = docker_image.forgejo.image_id
+  restart = "unless-stopped"
+
+  env = [
+    "USER_UID=1000",
+    "USER_GID=1000",
+    "TZ=${var.timezone}",
+
+    # Basic server config for reverse proxy on git.lan
+    "FORGEJO__server__DOMAIN=${var.forgejo_host}",
+    "FORGEJO__server__ROOT_URL=http://${var.forgejo_host}/",
+    "FORGEJO__server__HTTP_PORT=3000",
+    "FORGEJO__server__SSH_DOMAIN=${var.forgejo_host}",
+    "FORGEJO__server__START_SSH_SERVER=true",
+    "FORGEJO__server__SSH_PORT=22",
+
+    # Helpful for private LAN setup
+    "FORGEJO__service__DISABLE_REGISTRATION=true",
+    "FORGEJO__service__REQUIRE_SIGNIN_VIEW=false"
+  ]
+
+  volumes {
+    host_path      = abspath("${path.module}/forgejo")
+    container_path = "/data"
+  }
+
+  networks_advanced {
+    name = docker_network.proxy_net.name
+  }
+}
+
+############################
 # Woodpecker Server
 ############################
 
@@ -241,11 +287,11 @@ resource "docker_container" "woodpecker_server" {
     "WOODPECKER_HOST=http://${var.woodpecker_host}",
     "WOODPECKER_AGENT_SECRET=${var.woodpecker_agent_secret}",
 
-    #Codeberg integration via Gitea-compatible forge
+    # Local Forgejo integration
     "WOODPECKER_GITEA=true",
-    "WOODPECKER_GITEA_URL=https://codeberg.org",
-    "WOODPECKER_GITEA_CLIENT=${var.woodpecker_codeberg_client}",
-    "WOODPECKER_GITEA_SECRET=${var.woodpecker_codeberg_secret}"
+    "WOODPECKER_GITEA_URL=http://${var.forgejo_host}",
+    "WOODPECKER_GITEA_CLIENT=${var.woodpecker_forgejo_client}",
+    "WOODPECKER_GITEA_SECRET=${var.woodpecker_forgejo_secret}"
   ]
 
   volumes {
@@ -256,6 +302,10 @@ resource "docker_container" "woodpecker_server" {
   networks_advanced {
     name = docker_network.proxy_net.name
   }
+
+  depends_on = [
+    docker_container.forgejo
+  ]
 }
 
 ############################
@@ -330,6 +380,7 @@ resource "docker_container" "nginx_proxy" {
     docker_container.nextcloud,
     docker_container.pihole,
     docker_container.yt_converter,
+    docker_container.forgejo,
     docker_container.woodpecker_server
   ]
 }
