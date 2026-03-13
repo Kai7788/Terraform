@@ -1,0 +1,7 @@
+mysql_root_password      = "nextcloud"
+mysql_password           = "nextcloud"
+pihole_webpassword       = "pihole"
+woodpecker_agent_secret   = "EIN_LANGES_SECRET"
+woodpecker_codeberg_client = "DEINE_CODEBERG_OAUTH_CLIENT_ID"
+woodpecker_codeberg_secret = "DEIN_CODEBERG_OAUTH_CLIENT_SECRET"
+woodpecker_host            = "ci.lan"
