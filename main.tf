@@ -34,12 +34,12 @@ variable "woodpecker_agent_secret" {
   sensitive = true
 }
 
-variable "woodpecker_gitlab_client" {
+variable "woodpecker_codeberg_client" {
   type      = string
   sensitive = true
 }
 
-variable "woodpecker_gitlab_secret" {
+variable "woodpecker_codeberg_secret" {
   type      = string
   sensitive = true
 }
