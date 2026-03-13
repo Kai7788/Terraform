@@ -282,7 +282,7 @@ resource "docker_container" "woodpecker_server" {
   restart = "unless-stopped"
 
   env = [
-    "WOODPECKER_OPEN=false",
+    "WOODPECKER_OPEN=true",
     "WOODPECKER_HOST=http://${var.woodpecker_host}",
     "WOODPECKER_AGENT_SECRET=${var.woodpecker_agent_secret}",
 
