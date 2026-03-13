@@ -1,26 +1,132 @@
-# main.tf
 terraform {
   required_providers {
     docker = {
-      source = "kreuzwerker/docker"
-
+      source  = "kreuzwerker/docker"
+      version = "~> 3.6"
     }
   }
 }
 
-
 provider "docker" {}
 
-# Shared Network
+############################
+# Variables
+############################
+
+variable "mysql_root_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "mysql_password" {
+  type      = string
+  sensitive = true
+  default   = "nextcloud"
+}
+
+variable "pihole_webpassword" {
+  type      = string
+  sensitive = true
+}
+
+variable "woodpecker_agent_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "woodpecker_gitlab_client" {
+  type      = string
+  sensitive = true
+}
+
+variable "woodpecker_gitlab_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "woodpecker_host" {
+  type    = string
+  default = "ci.lan"
+}
+
+variable "timezone" {
+  type    = string
+  default = "Europe/Berlin"
+}
+
+############################
+# Networks
+############################
+
 resource "docker_network" "proxy_net" {
   name   = "proxy_net"
   driver = "bridge"
 }
 
-# === Redis ===
+resource "docker_network" "tor_net" {
+  name   = "tor_net"
+  driver = "bridge"
+}
+
+############################
+# Images
+############################
+
+resource "docker_image" "redis" {
+  name = "redis:alpine"
+}
+
+resource "docker_image" "mariadb" {
+  name = "mariadb:10.6"
+}
+
+resource "docker_image" "nextcloud" {
+  name = "lscr.io/linuxserver/nextcloud:latest"
+}
+
+resource "docker_image" "nginx" {
+  name = "nginx:alpine"
+}
+
+resource "docker_image" "pihole" {
+  name = "pihole/pihole:latest"
+}
+
+resource "docker_image" "tor_simple" {
+  name = "osminogin/tor-simple:latest"
+}
+
+resource "docker_image" "woodpecker_server" {
+  name = "woodpeckerci/woodpecker-server:v3"
+}
+
+resource "docker_image" "woodpecker_agent" {
+  name = "woodpeckerci/woodpecker-agent:v3"
+}
+
+resource "docker_image" "yt_converter_image" {
+  name = "yt_converter:latest"
+  build {
+    context    = "${path.module}/converter"
+    dockerfile = "Dockerfile"
+  }
+}
+
+############################
+# Shared volumes
+############################
+
+resource "docker_volume" "woodpecker_server_data" {
+  name = "woodpecker_server_data"
+}
+
+############################
+# Redis
+############################
+
 resource "docker_container" "nextcloud_redis" {
   name    = "nextcloud_redis"
-  image   = "redis:alpine"
+  image   = docker_image.redis.image_id
   restart = "unless-stopped"
 
   networks_advanced {
@@ -28,15 +134,18 @@ resource "docker_container" "nextcloud_redis" {
   }
 }
 
-# === MariaDB ===
+############################
+# MariaDB
+############################
+
 resource "docker_container" "nextcloud_db" {
   name    = "nextcloud_db"
-  image   = "mariadb:10.6"
+  image   = docker_image.mariadb.image_id
   restart = "unless-stopped"
 
   env = [
-    "MYSQL_ROOT_PASSWORD=nextcloud",
-    "MYSQL_PASSWORD=nextcloud",
+    "MYSQL_ROOT_PASSWORD=${var.mysql_root_password}",
+    "MYSQL_PASSWORD=${var.mysql_password}",
     "MYSQL_DATABASE=nextcloud",
     "MYSQL_USER=nextcloud"
   ]
@@ -56,20 +165,23 @@ resource "docker_container" "nextcloud_db" {
   }
 }
 
-# === Nextcloud ===
+############################
+# Nextcloud
+############################
+
 resource "docker_container" "nextcloud" {
   name    = "nextcloud"
-  image   = "lscr.io/linuxserver/nextcloud:latest"
+  image   = docker_image.nextcloud.image_id
   restart = "unless-stopped"
 
   env = [
     "PUID=33",
     "PGID=33",
-    "TZ=Europe/Berlin",
+    "TZ=${var.timezone}",
     "MYSQL_HOST=nextcloud_db",
     "MYSQL_DATABASE=nextcloud",
     "MYSQL_USER=nextcloud",
-    "MYSQL_PASSWORD=nextcloud",
+    "MYSQL_PASSWORD=${var.mysql_password}",
     "REDIS_HOST=nextcloud_redis"
   ]
 
@@ -91,22 +203,18 @@ resource "docker_container" "nextcloud" {
   }
 
   depends_on = [
-    docker_container.nextcloud_db
+    docker_container.nextcloud_db,
+    docker_container.nextcloud_redis
   ]
 }
 
-# === YouTube Converter (backend build from local Dockerfile) ===
-resource "docker_image" "yt_converter_image" {
-  name = "yt_converter:latest"
-  build {
-    context    = "${path.module}/converter"
-    dockerfile = "Dockerfile"
-  }
-}
+############################
+# YouTube Converter
+############################
 
 resource "docker_container" "yt_converter" {
   name    = "yt_converter"
-  image   = docker_image.yt_converter_image.name
+  image   = docker_image.yt_converter_image.image_id
   restart = "unless-stopped"
 
   volumes {
@@ -119,10 +227,74 @@ resource "docker_container" "yt_converter" {
   }
 }
 
-# === NGINX (serving as frontend and reverse proxy) ===
+############################
+# Woodpecker Server
+############################
+
+resource "docker_container" "woodpecker_server" {
+  name    = "woodpecker_server"
+  image   = docker_image.woodpecker_server.image_id
+  restart = "unless-stopped"
+
+  env = [
+    "WOODPECKER_OPEN=false",
+    "WOODPECKER_HOST=http://${var.woodpecker_host}",
+    "WOODPECKER_AGENT_SECRET=${var.woodpecker_agent_secret}",
+
+    # GitLab integration
+    "WOODPECKER_GITLAB=true",
+    "WOODPECKER_GITLAB_URL=https://gitlab.com",
+    "WOODPECKER_GITLAB_CLIENT=${var.woodpecker_gitlab_client}",
+    "WOODPECKER_GITLAB_SECRET=${var.woodpecker_gitlab_secret}"
+  ]
+
+  volumes {
+    volume_name    = docker_volume.woodpecker_server_data.name
+    container_path = "/var/lib/woodpecker"
+  }
+
+  networks_advanced {
+    name = docker_network.proxy_net.name
+  }
+}
+
+############################
+# Woodpecker Agent
+############################
+
+resource "docker_container" "woodpecker_agent" {
+  name    = "woodpecker_agent"
+  image   = docker_image.woodpecker_agent.image_id
+  restart = "unless-stopped"
+
+  env = [
+    "WOODPECKER_SERVER=woodpecker_server:9000",
+    "WOODPECKER_AGENT_SECRET=${var.woodpecker_agent_secret}",
+    "WOODPECKER_MAX_WORKFLOWS=1",
+    "WOODPECKER_BACKEND_DOCKER_NETWORK=${docker_network.proxy_net.name}"
+  ]
+
+  volumes {
+    host_path      = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
+  }
+
+  networks_advanced {
+    name = docker_network.proxy_net.name
+  }
+
+  depends_on = [
+    docker_container.woodpecker_server
+  ]
+}
+
+############################
+# NGINX reverse proxy
+############################
+
 resource "docker_container" "nginx_proxy" {
   name    = "nginx_proxy"
-  image   = "nginx:alpine"
+  image   = docker_image.nginx.image_id
   restart = "unless-stopped"
 
   ports {
@@ -153,12 +325,22 @@ resource "docker_container" "nginx_proxy" {
   networks_advanced {
     name = docker_network.proxy_net.name
   }
+
+  depends_on = [
+    docker_container.nextcloud,
+    docker_container.pihole,
+    docker_container.yt_converter,
+    docker_container.woodpecker_server
+  ]
 }
 
-# === Pi-hole ===
+############################
+# Pi-hole
+############################
+
 resource "docker_container" "pihole" {
   name    = "pihole"
-  image   = "pihole/pihole:latest"
+  image   = docker_image.pihole.image_id
   restart = "unless-stopped"
 
   ports {
@@ -186,8 +368,8 @@ resource "docker_container" "pihole" {
   }
 
   env = [
-    "TZ=Europe/Berlin",
-    "WEBPASSWORD=pihole",
+    "TZ=${var.timezone}",
+    "WEBPASSWORD=${var.pihole_webpassword}",
     "FTLCONF_dns_listeningMode=all",
     "PIHOLE_DNS_=1.1.1.1;8.8.8.8",
     "VIRTUAL_HOST=pihole.raspberry",
@@ -204,11 +386,10 @@ resource "docker_container" "pihole" {
     container_path = "/etc/pihole"
   }
 
-  # Optional: Uncomment to use custom dnsmasq config
-  # volumes {
-  #   host_path      = "${path.module}/pihole/etc-dnsmasq.d"
-  #   container_path = "/etc/dnsmasq.d"
-  # }
+  volumes {
+    host_path      = abspath("${path.module}/pihole/etc-dnsmasq.d")
+    container_path = "/etc/dnsmasq.d"
+  }
 
   privileged = true
 
@@ -217,16 +398,13 @@ resource "docker_container" "pihole" {
   }
 }
 
-
-# === Tor Relay ===
-resource "docker_network" "tor_net" {
-  name   = "tor_net"
-  driver = "bridge"
-}
+############################
+# Tor Relay
+############################
 
 resource "docker_container" "tor_relay" {
   name    = "tor_relay"
-  image   = "osminogin/tor-simple:latest"
+  image   = docker_image.tor_simple.image_id
   restart = "unless-stopped"
 
   ports {
