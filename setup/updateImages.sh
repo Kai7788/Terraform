@@ -6,3 +6,5 @@ docker pull pihole/pihole:latest
 docker pull osminogin/tor-simple:latest
 docker pull woodpeckerci/woodpecker-server:v3
 docker pull woodpeckerci/woodpecker-agent:v3
+docker pull nginx:alpine
+docker pull codeberg.org/forgejo/forgejo:14
