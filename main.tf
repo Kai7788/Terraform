@@ -241,11 +241,11 @@ resource "docker_container" "woodpecker_server" {
     "WOODPECKER_HOST=http://${var.woodpecker_host}",
     "WOODPECKER_AGENT_SECRET=${var.woodpecker_agent_secret}",
 
-    # GitLab integration
-    "WOODPECKER_GITLAB=true",
-    "WOODPECKER_GITLAB_URL=https://gitlab.com",
-    "WOODPECKER_GITLAB_CLIENT=${var.woodpecker_gitlab_client}",
-    "WOODPECKER_GITLAB_SECRET=${var.woodpecker_gitlab_secret}"
+    #Codeberg integration via Gitea-compatible forge
+    "WOODPECKER_GITEA=true",
+    "WOODPECKER_GITEA_URL=https://codeberg.org",
+    "WOODPECKER_GITEA_CLIENT=${var.woodpecker_codeberg_client}",
+    "WOODPECKER_GITEA_SECRET=${var.woodpecker_codeberg_secret}"
   ]
 
   volumes {
