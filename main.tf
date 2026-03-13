@@ -246,22 +246,21 @@ resource "docker_container" "forgejo" {
   restart = "unless-stopped"
 
   env = [
-    "USER_UID=1000",
-    "USER_GID=1000",
-    "TZ=${var.timezone}",
+  "USER_UID=1000",
+  "USER_GID=1000",
+  "TZ=${var.timezone}",
 
-    # Basic server config for reverse proxy on git.lan
-    "FORGEJO__server__DOMAIN=${var.forgejo_host}",
-    "FORGEJO__server__ROOT_URL=http://${var.forgejo_host}/",
-    "FORGEJO__server__HTTP_PORT=3000",
-    "FORGEJO__server__SSH_DOMAIN=${var.forgejo_host}",
-    "FORGEJO__server__START_SSH_SERVER=true",
-    "FORGEJO__server__SSH_PORT=22",
+  "FORGEJO__server__DOMAIN=${var.forgejo_host}",
+  "FORGEJO__server__ROOT_URL=http://${var.forgejo_host}/",
+  "FORGEJO__server__HTTP_PORT=3000",
+  "FORGEJO__server__SSH_DOMAIN=${var.forgejo_host}",
 
-    # Helpful for private LAN setup
-    "FORGEJO__service__DISABLE_REGISTRATION=true",
-    "FORGEJO__service__REQUIRE_SIGNIN_VIEW=false"
-  ]
+  # eingebauten SSH-Server deaktivieren
+  "FORGEJO__server__START_SSH_SERVER=false",
+
+  "FORGEJO__service__DISABLE_REGISTRATION=true",
+  "FORGEJO__service__REQUIRE_SIGNIN_VIEW=false"
+]
 
   volumes {
     host_path      = abspath("${path.module}/forgejo")
