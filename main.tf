@@ -255,12 +255,10 @@ resource "docker_container" "forgejo" {
     "FORGEJO__server__HTTP_PORT=3000",
 
     "FORGEJO__server__SSH_DOMAIN=${var.forgejo_host}",
-    "FORGEJO__server__START_SSH_SERVER=true",
     "FORGEJO__server__SSH_PORT=2222",
-    "FORGEJO__server__SSH_LISTEN_PORT=22",
+    "FORGEJO__server__START_SSH_SERVER=false"
 
-    "FORGEJO__service__DISABLE_REGISTRATION=true",
-    "FORGEJO__service__REQUIRE_SIGNIN_VIEW=false"
+    # SSH_LISTEN_PORT hier weglassen
   ]
 
   ports {
