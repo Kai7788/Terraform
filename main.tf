@@ -256,9 +256,12 @@ resource "docker_container" "forgejo" {
 
     "FORGEJO__server__SSH_DOMAIN=${var.forgejo_host}",
     "FORGEJO__server__SSH_PORT=2222",
-    "FORGEJO__server__START_SSH_SERVER=false"
+    "FORGEJO__server__START_SSH_SERVER=false",
 
-    # SSH_LISTEN_PORT hier weglassen
+    "FORGEJO__webhook__ALLOWED_HOST_LIST=ci.lan,192.168.178.150",
+
+    "FORGEJO__service__DISABLE_REGISTRATION=true",
+    "FORGEJO__service__REQUIRE_SIGNIN_VIEW=false"
   ]
 
   ports {
