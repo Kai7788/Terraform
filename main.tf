@@ -246,21 +246,27 @@ resource "docker_container" "forgejo" {
   restart = "unless-stopped"
 
   env = [
-  "USER_UID=1000",
-  "USER_GID=1000",
-  "TZ=${var.timezone}",
+    "USER_UID=1000",
+    "USER_GID=1000",
+    "TZ=${var.timezone}",
 
-  "FORGEJO__server__DOMAIN=${var.forgejo_host}",
-  "FORGEJO__server__ROOT_URL=http://${var.forgejo_host}/",
-  "FORGEJO__server__HTTP_PORT=3000",
-  "FORGEJO__server__SSH_DOMAIN=${var.forgejo_host}",
+    "FORGEJO__server__DOMAIN=${var.forgejo_host}",
+    "FORGEJO__server__ROOT_URL=http://${var.forgejo_host}/",
+    "FORGEJO__server__HTTP_PORT=3000",
 
-  # eingebauten SSH-Server deaktivieren
-  "FORGEJO__server__START_SSH_SERVER=false",
+    "FORGEJO__server__SSH_DOMAIN=${var.forgejo_host}",
+    "FORGEJO__server__START_SSH_SERVER=true",
+    "FORGEJO__server__SSH_PORT=2222",
+    "FORGEJO__server__SSH_LISTEN_PORT=22",
 
-  "FORGEJO__service__DISABLE_REGISTRATION=true",
-  "FORGEJO__service__REQUIRE_SIGNIN_VIEW=false"
-]
+    "FORGEJO__service__DISABLE_REGISTRATION=true",
+    "FORGEJO__service__REQUIRE_SIGNIN_VIEW=false"
+  ]
+
+  ports {
+    internal = 22
+    external = 2222
+  }
 
   volumes {
     host_path      = abspath("${path.module}/forgejo")
