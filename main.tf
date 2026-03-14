@@ -292,7 +292,7 @@ resource "docker_container" "woodpecker_server" {
 
     # Local Forgejo integration
     "WOODPECKER_GITEA=true",
-    "WOODPECKER_GITEA_URL=http://${var.forgejo_host}",
+    "WOODPECKER_GITEA_URL=http://forgejo:3000",
     "WOODPECKER_GITEA_CLIENT=${var.woodpecker_forgejo_client}",
     "WOODPECKER_GITEA_SECRET=${var.woodpecker_forgejo_secret}"
   ]
