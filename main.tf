@@ -113,14 +113,6 @@ resource "docker_image" "forgejo" {
   name = "codeberg.org/forgejo/forgejo:14"
 }
 
-resource "docker_image" "yt_converter_image" {
-  name = "yt_converter:latest"
-  build {
-    context    = "${path.module}/converter"
-    dockerfile = "Dockerfile"
-  }
-}
-
 ############################
 # Shared volumes
 ############################
@@ -215,25 +207,6 @@ resource "docker_container" "nextcloud" {
     docker_container.nextcloud_db,
     docker_container.nextcloud_redis
   ]
-}
-
-############################
-# YouTube Converter
-############################
-
-resource "docker_container" "yt_converter" {
-  name    = "yt_converter"
-  image   = docker_image.yt_converter_image.image_id
-  restart = "unless-stopped"
-
-  volumes {
-    host_path      = abspath("${path.module}/converter/tmp")
-    container_path = "/app/tmp"
-  }
-
-  networks_advanced {
-    name = docker_network.proxy_net.name
-  }
 }
 
 ############################
@@ -385,7 +358,6 @@ resource "docker_container" "nginx_proxy" {
   depends_on = [
     docker_container.nextcloud,
     docker_container.pihole,
-    docker_container.yt_converter,
     docker_container.forgejo,
     docker_container.woodpecker_server
   ]
